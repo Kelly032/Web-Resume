@@ -1013,9 +1013,10 @@ export default function Home() {
                     />
                     
                     <div className="relative">
-                      <div className="flex items-start gap-4 mb-6">
+                      <div className="flex items-start justify-between gap-4 mb-6">
+                        <div className="flex items-start gap-4 flex-1 min-w-0">
                         <motion.div 
-                          className="glass-icon p-4 rounded-2xl"
+                          className="glass-icon p-4 rounded-2xl shrink-0"
                           whileHover={{ 
                             boxShadow: "0 0 30px rgba(216, 180, 254, 0.24)",
                           }}
@@ -1023,7 +1024,7 @@ export default function Home() {
                         >
                           <project.icon className="w-7 h-7" />
                         </motion.div>
-                        <div className="flex-1">
+                        <div className="min-w-0">
                           <motion.h4 
                             className="hoverable font-semibold text-xl text-foreground mb-3 relative inline-block"
                             whileHover={{ color: "rgb(245, 243, 255)" }}
@@ -1032,21 +1033,21 @@ export default function Home() {
                           </motion.h4>
                           <p className="text-base resume-body-copy-soft">{project.subtitle}</p>
                         </div>
+                        </div>
+                        {"demoHref" in project && project.demoHref && (
+                          <a
+                            href={project.demoHref}
+                            className="demo-video-pill hoverable inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white transition-all shrink-0 self-start mt-1"
+                          >
+                            <Play className="w-4 h-4" />
+                            视频 Demo
+                          </a>
+                        )}
                       </div>
                       
                       <p className="resume-body-copy leading-relaxed text-lg mb-4">
                         {project.desc}
                       </p>
-
-                      {"demoHref" in project && project.demoHref && (
-                        <a
-                          href={project.demoHref}
-                          className="hoverable inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full glass-chip text-sm font-medium text-violet-50 transition-all hover:border-white/50"
-                        >
-                          <Play className="w-4 h-4" />
-                          视频 Demo
-                        </a>
-                      )}
 
                       <div className="glass-highlight p-4 rounded-xl">
                         <div className="flex items-center gap-2 text-white mb-2">
