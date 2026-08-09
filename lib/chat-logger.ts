@@ -1,6 +1,6 @@
 import fs from "fs"
 import path from "path"
-import { put, list } from "@vercel/blob"
+import { get, list, put } from "@vercel/blob"
 
 export type ChatLogEntry = {
   id: string
@@ -20,8 +20,21 @@ function createLogId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-function useBlobStorage() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
+/** Vercel Blob: token (legacy) or OIDC store id; on Vercel never use local disk. */
+function shouldUseBlobStorage() {
+  if (process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID) {
+    return true
+  }
+  return process.env.VERCEL === "1"
+}
+
+export function getBlobStorageDiagnostics() {
+  return {
+    mode: shouldUseBlobStorage() ? ("blob" as const) : ("local" as const),
+    isVercel: process.env.VERCEL === "1",
+    hasBlobToken: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    hasBlobStoreId: Boolean(process.env.BLOB_STORE_ID),
+  }
 }
 
 async function appendLocalLog(entry: ChatLogEntry) {
@@ -45,13 +58,14 @@ export async function appendChatLog(input: Omit<ChatLogEntry, "id" | "timestamp"
   }
 
   try {
-    if (useBlobStorage()) {
+    if (shouldUseBlobStorage()) {
       await appendBlobLog(entry)
     } else {
       await appendLocalLog(entry)
     }
   } catch (error) {
-    console.error("[chat-log] failed to persist conversation:", error)
+    const detail = error instanceof Error ? error.message : String(error)
+    console.error("[chat-log] failed to persist conversation:", detail, getBlobStorageDiagnostics())
   }
 
   return entry
@@ -72,14 +86,25 @@ async function readLocalLogs(limit: number): Promise<ChatLogEntry[]> {
     .reverse()
 }
 
+async function readBlobObject(pathname: string): Promise<ChatLogEntry | null> {
+  const result = await get(pathname, { access: "private", useCache: false })
+  if (!result || result.statusCode !== 200 || !result.stream) return null
+
+  const text = await new Response(result.stream).text()
+  return JSON.parse(text) as ChatLogEntry
+}
+
 async function readBlobLogs(limit: number): Promise<ChatLogEntry[]> {
   const result = await list({ prefix: BLOB_PREFIX, limit: Math.min(limit, 1000) })
 
   const entries = await Promise.all(
     result.blobs.map(async (blob) => {
-      const response = await fetch(blob.url, { cache: "no-store" })
-      if (!response.ok) return null
-      return (await response.json()) as ChatLogEntry
+      try {
+        return await readBlobObject(blob.pathname)
+      } catch (error) {
+        console.error("[chat-log] failed to read blob:", blob.pathname, error)
+        return null
+      }
     }),
   )
 
@@ -90,14 +115,14 @@ async function readBlobLogs(limit: number): Promise<ChatLogEntry[]> {
 }
 
 export async function listChatLogs(limit = 100): Promise<ChatLogEntry[]> {
-  if (useBlobStorage()) {
+  if (shouldUseBlobStorage()) {
     return readBlobLogs(limit)
   }
   return readLocalLogs(limit)
 }
 
 export function getChatLogStorageMode(): "blob" | "local" {
-  return useBlobStorage() ? "blob" : "local"
+  return shouldUseBlobStorage() ? "blob" : "local"
 }
 
 export function getLocalLogFilePath() {

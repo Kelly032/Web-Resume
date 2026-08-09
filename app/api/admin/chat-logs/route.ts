@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getChatLogStorageMode, getLocalLogFilePath, listChatLogs } from "@/lib/chat-logger"
+import { getBlobStorageDiagnostics, getChatLogStorageMode, getLocalLogFilePath, listChatLogs } from "@/lib/chat-logger"
 
 export const runtime = "nodejs"
 
@@ -23,6 +23,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     storage: getChatLogStorageMode(),
+    diagnostics: getBlobStorageDiagnostics(),
     localPath: getChatLogStorageMode() === "local" ? getLocalLogFilePath() : null,
     count: logs.length,
     logs,

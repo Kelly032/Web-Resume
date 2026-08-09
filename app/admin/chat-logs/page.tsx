@@ -7,6 +7,11 @@ export default function ChatLogsAdminPage() {
   const [password, setPassword] = useState("")
   const [logs, setLogs] = useState<ChatLogEntry[]>([])
   const [storage, setStorage] = useState<"local" | "blob" | "">("")
+  const [diagnostics, setDiagnostics] = useState<{
+    isVercel?: boolean
+    hasBlobToken?: boolean
+    hasBlobStoreId?: boolean
+  } | null>(null)
   const [localPath, setLocalPath] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -23,6 +28,11 @@ export default function ChatLogsAdminPage() {
       const data = (await response.json()) as {
         logs?: ChatLogEntry[]
         storage?: "local" | "blob"
+        diagnostics?: {
+          isVercel?: boolean
+          hasBlobToken?: boolean
+          hasBlobStoreId?: boolean
+        }
         localPath?: string | null
         error?: string
       }
@@ -33,6 +43,7 @@ export default function ChatLogsAdminPage() {
 
       setLogs(data.logs ?? [])
       setStorage(data.storage ?? "")
+      setDiagnostics(data.diagnostics ?? null)
       setLocalPath(data.localPath ?? null)
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : "加载失败"
@@ -77,6 +88,14 @@ export default function ChatLogsAdminPage() {
             <p className="text-white/70 text-sm">
               当前存储：{storage === "local" ? "本地文件" : "Vercel Blob"}
               {localPath ? ` · ${localPath}` : ""}
+              {diagnostics && storage === "blob" && (
+                <>
+                  {" "}
+                  · Vercel={diagnostics.isVercel ? "是" : "否"}
+                  · Token={diagnostics.hasBlobToken ? "有" : "无"}
+                  · StoreId={diagnostics.hasBlobStoreId ? "有" : "无"}
+                </>
+              )}
             </p>
           )}
         </div>
