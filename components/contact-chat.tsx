@@ -67,6 +67,24 @@ function getOrCreateSessionId() {
   return sessionId
 }
 
+function formatChatError(message: string): string {
+  if (message.includes("LLM_API_KEY")) {
+    const onVercel =
+      typeof window !== "undefined" &&
+      !window.location.hostname.includes("localhost") &&
+      !window.location.hostname.startsWith("127.")
+    return onVercel
+      ? "AI 服务未就绪：请在 Vercel 配置 LLM_API_KEY 后重新 Deploy。"
+      : "AI 服务未就绪：请在 .env.local 配置 LLM_API_KEY 后重启 npm run dev。"
+  }
+
+  if (message.includes("localhost:8080")) {
+    return "服务器暂时无法响应，请稍后重试。"
+  }
+
+  return message
+}
+
 export function ContactChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([createWelcomeMessage()])
   const [turnCount, setTurnCount] = useState(0)
@@ -121,7 +139,6 @@ export function ContactChat() {
     const nextMessages = [...messages, userMessage]
     const nextTurnCount = turnCount + 1
     const previousTurnCount = turnCount
-    const previousMessages = messages
 
     setMessages(nextMessages)
     setTurnCount(nextTurnCount)
@@ -148,22 +165,35 @@ export function ContactChat() {
       try {
         data = JSON.parse(raw) as { reply?: string; error?: string; turnsRemaining?: number }
       } catch {
-        throw new Error("服务暂时不可用，请确认开发服务器已启动（http://localhost:8080）")
+        throw new Error(
+          response.ok
+            ? "服务器返回格式异常，请稍后重试。"
+            : `服务器错误 (${response.status})，请稍后重试。`,
+        )
       }
 
       if (!response.ok) {
-        throw new Error(data.error ?? "发送失败，请稍后重试")
+        throw new Error(data.error ?? `发送失败 (${response.status})，请稍后重试。`)
       }
 
       setMessages((current) => [
         ...current,
         { id: createId(), role: "assistant", content: data.reply ?? "暂时无法生成回复。" },
       ])
+      setError(null)
     } catch (sendError) {
       setTurnCount(previousTurnCount)
-      setMessages(previousMessages)
       const message = sendError instanceof Error ? sendError.message : "发送失败，请稍后重试"
-      setError(message)
+      const friendly = formatChatError(message)
+      setError(friendly)
+      setMessages((current) => [
+        ...current,
+        {
+          id: createId(),
+          role: "assistant",
+          content: `抱歉，这次没能成功回复。\n\n原因：${friendly}`,
+        },
+      ])
     } finally {
       setLoading(false)
     }

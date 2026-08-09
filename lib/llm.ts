@@ -27,7 +27,11 @@ export async function createChatCompletion(
   const temperature = options?.temperature ?? 0.5
 
   if (!apiKey) {
-    throw new Error("未配置 LLM_API_KEY，请在 .env.local 中设置")
+    const hint =
+      process.env.VERCEL === "1"
+        ? "请在 Vercel → Settings → Environment Variables 添加 LLM_API_KEY，保存后重新 Deploy。"
+        : "请在项目根目录 .env.local 中设置 LLM_API_KEY，保存后重启 npm run dev。"
+    throw new Error(`未配置 LLM_API_KEY。${hint}`)
   }
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
