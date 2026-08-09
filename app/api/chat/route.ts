@@ -1,6 +1,7 @@
 import { appendChatLog } from "@/lib/chat-logger"
 import { NextResponse } from "next/server"
 import { MAX_CHAT_TURNS, MAX_OUTPUT_TOKENS } from "@/lib/chat-config"
+import { sanitizeChatReply } from "@/lib/chat-format"
 import { createChatCompletion, type ChatMessage } from "@/lib/llm"
 import { searchKnowledge } from "@/lib/knowledge"
 import { buildAgentSystemPrompt } from "@/lib/resume-agent-prompt"
@@ -52,10 +53,11 @@ export async function POST(request: Request) {
         })),
     ]
 
-    const reply = await createChatCompletion(messages, {
+    const rawReply = await createChatCompletion(messages, {
       maxTokens: MAX_OUTPUT_TOKENS,
       temperature: 0.15,
     })
+    const reply = sanitizeChatReply(rawReply)
 
     const sources = contextChunks.map((chunk) => chunk.split("\n")[0].replace(/^\[|\]$/g, ""))
 
