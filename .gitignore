@@ -6,7 +6,8 @@ __v0_jsx-dev-runtime.ts
 .v0-trash/
 .vercel/
 
-# Environment variables（.env.local 为本地覆盖，可选）
+# Environment variables（密钥只放 .env.local，切勿提交）
+.env
 .env*.local
 
 # Knowledge base may contain private notes (optional)
